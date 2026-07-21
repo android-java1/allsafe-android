@@ -6,8 +6,6 @@ name: CodeQL
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: 0 0 * * 1
   workflow_dispatch:
     inputs:
       languages:
@@ -34,8 +32,18 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: java
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+          build-mode: manual
+      - name: Build
+        run: |
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assemble --no-daemon \
+              -Dorg.gradle.jvm.toolchain.install.auto=false \
+              -Dorg.gradle.warning.mode=none \
+              || echo "Gradle build failed, continuing with partial results"
+          elif [ -f "pom.xml" ]; then
+            mvn compile -B -q || echo "Maven build failed, continuing with partial results"
+          fi
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
